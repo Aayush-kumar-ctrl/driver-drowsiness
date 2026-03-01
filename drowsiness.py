@@ -2,6 +2,22 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from scipy.spatial import distance as dist
+import winsound
+import threading
+
+# -------------------------------
+# Global Alarm Variable
+# -------------------------------
+ALARM_ON = False
+
+# -------------------------------
+# Alarm Function (Continuous Beep)
+# -------------------------------
+def sound_alarm():
+    global ALARM_ON
+    while ALARM_ON:
+        winsound.Beep(1000, 500)  # Frequency 1000Hz, duration 0.5 sec
+
 
 # -------------------------------
 # Eye Aspect Ratio Function
@@ -43,7 +59,7 @@ else:
     print("✅ Camera detected")
 
 # -------------------------------
-# Eye Landmark Indexes (MediaPipe)
+# Eye Landmark Indexes
 # -------------------------------
 LEFT_EYE = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE = [362, 385, 387, 263, 373, 380]
@@ -75,13 +91,13 @@ while True:
             left_eye = []
             right_eye = []
 
-            # Left Eye Points
+            # Extract Left Eye Points
             for idx in LEFT_EYE:
                 x = int(face_landmarks.landmark[idx].x * w)
                 y = int(face_landmarks.landmark[idx].y * h)
                 left_eye.append((x, y))
 
-            # Right Eye Points
+            # Extract Right Eye Points
             for idx in RIGHT_EYE:
                 x = int(face_landmarks.landmark[idx].x * w)
                 y = int(face_landmarks.landmark[idx].y * h)
@@ -91,7 +107,7 @@ while True:
             rightEAR = eye_aspect_ratio(right_eye)
             ear = (leftEAR + rightEAR) / 2.0
 
-            # Draw eye landmarks
+            # Draw eye points
             for point in left_eye:
                 cv2.circle(frame, point, 2, (0, 255, 0), -1)
 
@@ -103,14 +119,23 @@ while True:
                 FRAME_COUNTER += 1
 
                 if FRAME_COUNTER >= ALARM_THRESHOLD:
-                    cv2.putText(frame, "DROWSINESS ALERT!",
+                    cv2.putText(frame,
+                                "DROWSINESS ALERT!",
                                 (50, 100),
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 1.5,
                                 (0, 0, 255),
                                 3)
+
+                    if not ALARM_ON:
+                        ALARM_ON = True
+                        t = threading.Thread(target=sound_alarm)
+                        t.daemon = True
+                        t.start()
+
             else:
                 FRAME_COUNTER = 0
+                ALARM_ON = False
 
     cv2.imshow("Driver Drowsiness Detection", frame)
 
